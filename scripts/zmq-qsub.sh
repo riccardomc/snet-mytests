@@ -1,4 +1,8 @@
 #!/bin/sh
+#
+# Run the zmq EXE RUNS times on a batch system. The root node is executed
+# locally.
+#
 
 DPORT=20737
 SPORT=20738

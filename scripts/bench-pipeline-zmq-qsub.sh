@@ -3,7 +3,7 @@
 TESTF=$1
 NRUNS=$2
 SRCDIR="$SNET_DIR/../snet-mytests/bench-pipeline"
-ZMQSUB="$SRCDIR/../scripts/snet-zmq-qsub.sh"
+ZMQSUB="$SRCDIR/../scripts/zmq-qsub.sh"
 
 ([ -z "$TESTF" ] |  [ -z "$NRUNS" ]) && echo "$0 <TEST_FILE> <RUNS>" && exit 1
 

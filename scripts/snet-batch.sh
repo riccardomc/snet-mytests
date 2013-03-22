@@ -1,4 +1,7 @@
 #!/bin/sh
+#
+# Execute $1 on a batch system, the root node is executed locally.
+#
 
 EXE_PATH=${SNET_DIR}/../snet-dev/snet-rts/examples/tests/distributed/
 EXE_NAME=$1
