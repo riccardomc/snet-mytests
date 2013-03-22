@@ -30,7 +30,7 @@ for line in $(cat $TESTF) ; do
   echo $1 $2 $3 $4 $5 $6 $7 $8 $9
   mkdir -p $RESDIR
 
-  echo $ZMQRUN -e $SRCDIR/test-$1-$2-$3-$8-$9/prog -n $(( $2 + 1 )) -i $SRCDIR/input-$4-$5-$6.xml -o $RESDIR/$TEST.dat -r $NRUNS 
+  $ZMQRUN -e $SRCDIR/test-$1-$2-$3-$8-$9/prog -n $(( $2 + 1 )) -i $SRCDIR/input-$4-$5-$6.xml -o $RESDIR/$TEST.dat -r $RUNS 
   
 done
 
