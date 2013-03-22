@@ -1,7 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Run the zmq EXE RUNS times on a batch system. The root node is executed
 # locally.
+#
+# This is used on the DAS system.
 #
 
 DPORT=20737
