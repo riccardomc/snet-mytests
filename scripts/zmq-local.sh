@@ -68,7 +68,7 @@ for ((j = 1; j <= $RUNS; j++)) do
 
   for ((i = 1; i < $NODES; i++)) do
     echo "$EXE -sport $base_port -dport $(($base_port + 1)) -raddr tcp://localhost:${root_port}/ &"
-    $EXE -sport $base_port -dport $(($base_port + 1)) -raddr tcp://localhost:${root_port}/ &
+    $EXE -sport $base_port -dport $(($base_port + 1)) -raddr tcp://localhost:${root_port}/ > /dev/null &
     base_port=$(($base_port + 2))
   done
 
