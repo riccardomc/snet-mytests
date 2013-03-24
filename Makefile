@@ -20,8 +20,8 @@ TESTS = $(foreach B,$(T_BASES), \
         $(foreach T,$(T_THREADING), \
         $(B)-$(L)-$(W)-$(N)-$(M)-$(C)-$(P)-$(T)-zmq))))))))
 
-test-file:
-	@echo $(TESTS) > test_file
-	sed -i 's| |\n|g' test_file
+test-%:
+	@echo $(TESTS) > $@
+	sed -i 's| |\n|g' $@
 
 all: test-file
