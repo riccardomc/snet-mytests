@@ -17,7 +17,7 @@ echo "$0 <TEST_FILE> <RUNS> [local|pbs|qsub]" && exit 1
 
 ZMQRUN="$PWD/scripts/zmq-$ZMQSCR.sh"
 
-RESDIR="${TESTF##*/}-$(date  +'%Y%m%d%H%M')"
+RESDIR="${TESTF##*/}-$ZMQSCR-$(date  +'%Y%m%d-%H%M')"
 
 make -C $SRCDIR clean
 

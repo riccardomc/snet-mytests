@@ -72,10 +72,10 @@ export SNET_BENCHTEST_OUTF=$OUT
 export SNET_BENCHTEST_RUNS=$RUNS
 export SNET_BENCHTEST_JOBS=$JOBS
 
-JOBN_=${JOBS##*/}
-JOBN=${JOBN_%%.dat}
+JOBN=${JOBS##*/}
+JOBN=${JOBN%%.dat}
 
-$QSUB -V -N $JOBN -lnodes=$(( $2 + 1 )):ppn=1 $JOBF
+$QSUB -V -N $JOBN -lnodes=$NODES:ppn=1 $JOBF
 
 unset SNET_BENCHTEST_PROG
 unset SNET_BENCHTEST_DATA
