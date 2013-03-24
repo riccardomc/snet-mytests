@@ -84,19 +84,17 @@ done
 
 RADDR=tcp://$(hostname -A | cut -d " " -f 1):$SPORT/
 
-VALG=$(which valgrind)
-
 for ((i = 1; i <= $RUNS; i++)) do
   echo TEST $i
   for ((j = 1; j < $NODES ; j++)) do
-    echo "$VALG $EXE $ARGS -raddr $RADDR" | qsub
+    echo "$EXE $ARGS -raddr $RADDR" | qsub
   done
   echo -n "Waiting for $(( $NODES - 1 )) running jobs... "
   pollqstat $(( $NODES - 1 )) 0.5
   echo -n " Running! "
   #/usr/bin/time -f "%e %S %U" -ao $OUT $EXE $ARGS -root $NODES -i $IN -o /dev/null
   export SNET_DBG_TIMING="$OUT"
-  $VALG $EXE $ARGS -root $NODES -i $IN -o /dev/null
+  $EXE $ARGS -root $NODES -i $IN -o /dev/null
   unset SNET_DBG_TIMING
   echo -n "Completed. Waiting for Jobs to terminate... "
   pollqstat 0 0.1
