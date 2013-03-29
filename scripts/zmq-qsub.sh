@@ -80,7 +80,6 @@ done
 [ -z "$NODES" ] && mandatory "-n"
 [ -z "$IN" ] && mandatory "-i"
 [ -z "$OUT" ] && mandatory "-o"
-[ -z "$VERB" ] && VERB=">/dev/null"
 
 RADDR=tcp://$(hostname -A | cut -d " " -f 1):$SPORT/
 
@@ -93,9 +92,9 @@ for ((i = 1; i <= $RUNS; i++)) do
   pollqstat $(( $NODES - 1 )) 0.5
   echo -n " Running! "
   #/usr/bin/time -f "%e %S %U" -ao $OUT $EXE $ARGS -root $NODES -i $IN -o /dev/null
-  export SNET_DBG_TIMING="$OUT"
+  export SNET_DBG_TIMING_LOG="$OUT"
   $EXE $ARGS -root $NODES -i $IN -o /dev/null
-  unset SNET_DBG_TIMING
+  unset SNET_DBG_TIMING_LOG
   echo -n "Completed. Waiting for Jobs to terminate... "
   pollqstat 0 0.1
   echo OK
