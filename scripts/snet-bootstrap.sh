@@ -11,28 +11,26 @@ itgz() {
   tar -xvzf $AR
   cd ${AR%.tar.gz}
   ./configure $2
-  make 
-  make install
+  make -j9 install
   cd ..
 }
 
 ilpel() {
   git clone https://github.com/snetdev/lpel.git
-  wget -O $LPELA $REPO/$LPELA
+  wget --user=snet --ask-password $LPELA $REPO/$LPELA
   mv lpel ${LPELA%.tar.gz}
   tar -xvzf ${LPELA}
   mv ${LPELA%.tar.gz} lpel
   cd lpel
   ./configure --with-pcl=${PREFIX} --with-mctx=pcl --prefix=${PREFIX}
-  make
-  make install
+  make -j9  install
   cd ..
 }
 
 isnet() {
   local SDIR=snet-rts
   git clone https://github.com/rcefala/snet-rts.git $SDIR
-  wget -O $SNETRTSA  $REPO/$SNETRTSA
+  wget --user=snet --ask-password $SNETRTSA  $REPO/$SNETRTSA
   mv $SDIR ${SNETRTSA%.tar.gz}
   tar -xvzf ${SNETRTSA}
   mv ${SNETRTSA%.tar.gz} $SDIR
@@ -45,7 +43,7 @@ isnet() {
 }
 
 isnetc() {
-  wget $REPO/$SNETCA
+  wget --user=snet --ask-password $REPO/$SNETCA
   tar -xvzf $SNETCA
   cd ${SNETCA%.tar.gz}
   ./configure --prefix=${PREFIX}
@@ -54,25 +52,20 @@ isnetc() {
 }
 
 dsnetc() {
-  wget $REPO
+  wget --user=snet --ask-password $REPO/snetc
   chmod +x snetc
   mv snetc $PREFIX/bin
 }
 
+REPO="http://riccardo.cefala.net/files/snet/"
 
-stty -echo 
-read -p "Password: " PASSW; echo 
-stty echo
-
-REPO="http://snet:${PASSW}@riccardo.cefala.net/files/snet/"
-
+mkdir -p $SNET_DIR
 
 #itgz 'http://xmailserver.org/pcl-1.12.tar.gz' --prefix=${PREFIX}
 #itgz 'http://download.zeromq.org/zeromq-3.2.2.tar.gz' --prefix=${PREFIX}
 #itgz 'http://download.zeromq.org/czmq-1.3.2.tar.gz' "--prefix=${PREFIX} --with-libzmq=${PREFIX}"
 
-
 #ilpel
-isnet
-isnetc
+#isnet
+#isnetc
 #dsnetc
