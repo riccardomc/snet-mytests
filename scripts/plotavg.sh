@@ -1,7 +1,7 @@
 #!/bin/bash
 
 RTERM=$(which R)
-PLOTS=$(dirname $0)/plotavg.R
+PLOTS=$(dirname $0)/plotavgbar.R
 
 TESTDIR=$1
 
