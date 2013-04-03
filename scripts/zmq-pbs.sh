@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Submit the zmq EXE using a PBS multinode job.
+# Submit the zmq PROG using a PBS multinode job.
 #
 # This is used on the LISA system.
 #
@@ -30,16 +30,16 @@ mandatory() {
 while getopts ":e:n:i:o:r::h" opt; do
   case $opt in
     e)
-      EXE=$OPTARG
+      PROG=$OPTARG
       ;;
     n)
       NODES=$OPTARG
       ;;
     i)
-      IN=$OPTARG
+      DATA=$OPTARG
       ;;
     o)
-      OUT=$OPTARG
+      OUTF=$OPTARG
       ;;
     r)
       RUNS=$OPTARG
@@ -60,21 +60,22 @@ while getopts ":e:n:i:o:r::h" opt; do
   esac
 done
 
-[ -z "$EXE" ] && mandatory "-e"
+[ -z "$PROG" ] && mandatory "-e"
 [ -z "$NODES" ] && mandatory "-n"
-[ -z "$IN" ] && mandatory "-i"
-[ -z "$OUT" ] && mandatory "-o"
+[ -z "$DATA" ] && mandatory "-i"
+[ -z "$OUTF" ] && mandatory "-o"
 [ -z "$RUNS" ] && mandatory "-r"
 
-export SNET_BENCHTEST_PROG=$EXE
-export SNET_BENCHTEST_DATA=$IN
-export SNET_BENCHTEST_OUTF=$OUT
+export SNET_BENCHTEST_PROG=$PROG
+export SNET_BENCHTEST_DATA=$DATA
+export SNET_BENCHTEST_OUTF=$OUTF
 export SNET_BENCHTEST_RUNS=$RUNS
 export SNET_BENCHTEST_JOBS=$JOBS
 
-JOBN=${JOBS##*/}
+JOBN=${OUTF##*/}
 JOBN=${JOBN%%.dat}
 
+echo "$QSUB -V -N $JOBN -lnodes=$NODES:ppn=1 $JOBF"
 $QSUB -V -N $JOBN -lnodes=$NODES:ppn=1 $JOBF
 
 unset SNET_BENCHTEST_PROG
