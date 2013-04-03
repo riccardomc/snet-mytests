@@ -2,13 +2,14 @@
 
 #T_BASES = sn sd pt bn bd
 T_BASES = sn
-T_LENS = 1 6 12
-T_WIDTHS = 0 1 5
-T_NRECS = 1 50
-T_CYCLES = 1 5
-T_THREADING = lpel
+T_LENS = 1
+T_WIDTHS = 1
+T_NRECS = 100000
+T_CYCLES = 1
+T_THREADING = pthread
 T_CORES = 1
 T_LOADS = 1
+T_DISTRIB = mpi zmq
 
 TESTS = $(foreach B,$(T_BASES), \
         $(foreach L,$(T_LENS), \
@@ -18,7 +19,8 @@ TESTS = $(foreach B,$(T_BASES), \
         $(foreach C,$(T_CYCLES), \
         $(foreach P,$(T_CORES), \
         $(foreach T,$(T_THREADING), \
-        $(B)-$(L)-$(W)-$(N)-$(M)-$(C)-$(P)-$(T)-zmq))))))))
+        $(foreach D,$(T_DISTRIB), \
+        $(B)-$(L)-$(W)-$(N)-$(M)-$(C)-$(P)-$(T)-$(D))))))))))
 
 test-%:
 	@echo $(TESTS) > $@
