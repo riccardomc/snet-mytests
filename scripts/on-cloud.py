@@ -155,9 +155,10 @@ if __name__ == "__main__":
     default="/tmp",
     help="remote dir where the EXE binary will be copied")
 
-  parser.add_option("-T", "--terminate", action="store_true",
-    dest="terminate", default=False,
-    help="terminate the instance when done")
+  parser.add_option("-A", "--keep-alive", action="store_true",
+    dest="keep_alive", default=False,
+    help="Do not terminate the instance when done. Default: True when\
+        -i ID is provided. False otherwise.")
 
   (options, args) = parser.parse_args()
 
@@ -175,11 +176,13 @@ if __name__ == "__main__":
         key_pair = options.key_pair,
         inst_type = options.inst_type,
         sec_group = options.sec_group)
+  else:
+    options.keep_alive = True
     
   print "Running on instance: %s" % instance
   run_on_instance(connection, instance, options.username, 
       options.key, options.remote_dir, executable, exe_args)
 
-  if options.terminate:
-    print "Terminating Instance"
+  print "Terminating Instance:", not options.keep_alive
+  if not options.keep_alive:
     terminate_instance(connection, instance)
