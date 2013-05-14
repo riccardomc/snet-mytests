@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#
 
 import os
 import time
@@ -6,34 +7,155 @@ import boto
 import boto.ec2
 import subprocess
 import shlex
+import sys
 from optparse import OptionParser, OptionGroup
 
-def poll_instance_state(instance, state, attempts = 90, delay = 2):
+def parse_options():
+  usage = "usage: %prog [OPTIONS] [EXE [-- [ARGS]]"
+  parser = OptionParser(usage=usage)
+
+  parser.add_option("-v", "--verbose", action="store_true",
+    dest="verbose", default=False,
+    help="verbose output")
+
+  parser.add_option("-q", "--quiet", action="store_true",
+    dest="quiet", default=False,
+    help="do not generate any output. Ignored if -v is specified")
+ 
+  parser.add_option("-i", "--id", action="store",
+    type="string", dest="instance_id",
+    default="",
+    help="ID of the target instance")
+
+  awsopts = OptionGroup(parser, "AWS options", "Amazon Web Services related options")
+
+  awsopts.add_option("-g", "--region", action="store",
+    type="string", dest="region",
+    default="eu-west-1",
+    help="AWS region in which the instance will be started")
+
+  awsopts.add_option("-a", "--ami", action="store",
+    type="string", dest="ami",
+    default="ami-f1a5b285",
+    help="AMI id of the S-Net enabled image")
+
+  awsopts.add_option("-p", "--key-pair", action="store",
+    type="string", dest="key_pair",
+    default="snetdev",
+    help="AWS key pair to use. Must match SSH KEY")
+
+  awsopts.add_option("-s", "--security-group", action="store",
+    type="string", dest="sec_group",
+    default="unsafe",
+    help="AWS security group in which the instance will be placed")
+
+  awsopts.add_option("-t", "--type", action="store",
+    type="string", dest="inst_type",
+    default="t1.micro",
+    help="AWS type of the instances")
+
+  sshopts = OptionGroup(parser, "SSH options", "Secure Shell related options")
+    
+  sshopts.add_option("-u", "--username", action="store",
+    type="string", dest="username",
+    default="ubuntu",
+    help="username that will execute EXE on the instance")
+
+  sshopts.add_option("-k", "--key", action="store",
+    type="string", dest="key",
+    default=os.path.expanduser("~/.ssh/snetdev.pem"),
+    help="SSH key to use to access the instances")
+  
+  sshopts.add_option("-r", "--remote-dir", action="store",
+    type="string", dest="remote_dir",
+    default="/tmp",
+    help="remote dir where the EXE binary will be copied")
+  
+  actions = OptionGroup(parser, "Actions", "Actions to perform. If more than one "
+      "action is specified, the evaluation order follows the one in this help")
+
+  actions.add_option("-I", "--instantiate", action="store_true",
+      dest="instantiate", default=False,
+      help="instantiate a new instance.  Output: aws_id,public_dns,state | 1")
+
+  actions.add_option("-S", "--state", action="store_true",
+      dest="state", default=False,
+      help="retrieve the state of instance ID. Output: state | 1")
+
+  actions.add_option("-C", "--copy", action="store_true",
+      dest="copy", default=False,
+      help="copy executable on REMOTE_DIR of instance ID. Output: 0 | 1")
+
+  actions.add_option("-R", "--run", action="store_true",
+      dest="run", default=False,
+      help="run executable in REMOTE_DIR of instance ID. Output: 0 | 1")
+
+  actions.add_option("-T", "--terminate", action="store_true",
+      dest="terminate", default=False,
+      help="terminate instance ID.  Output: 0 | 1")
+
+  parser.add_option_group(awsopts)
+  parser.add_option_group(sshopts)
+  parser.add_option_group(actions)
+
+  return parser.parse_args()
+
+def verbose_print(*args):
+  for arg in args:
+    print arg,
+
+def fatal_error(*args):
+  return_value = 1
+  print_info("ERROR:", *args)
+  print_return(return_value)
+  sys.exit(return_value)
+
+def connect(region = "eu-west-1"):
+  print_info("Connecting to cloud provider...")
+  try:
+    connection = boto.ec2.connect_to_region(options.region)
+  except:
+    fatal_error("check credentials or connectivity\n")
+  print_info("OK\n")
+
+  return connection
+
+def poll_state(instance, state, attempts = 90, delay = 2):
   """ 
   Polls the state of the instance until timeout or it becames True.
 
-  @return On success: the id of the instance 
-          On failure: None
+  @return On success: True
+          On timeout: False
+          On Error: None (if the instance doesn't exist)
   """
-  if not instance:
-    return None
-
   instance_state = instance.update(validate = True)
+  print_info("Polling", instance.id, "for state", state,
+      "for", (attempts * delay),"seconds :", instance_state, "\n")
   for i in range(1, attempts):
     instance_state = instance.update(validate = True)
     if instance_state != state:
-      print "Instance", instance.id, "is", instance.state
       time.sleep(2)
     else:
       break
 
   if instance_state != state:
-    return None
+    fatal_error("instance", instance.id, "timed out for state", state, "\n")
 
-  return instance.id
+  return True
 
+def get_instance(connection, instance_id):
+  try:
+    reservation = connection.get_all_instances([instance_id]);
+    instance = reservation[0].instances[0]
+  except:
+    instance = None
+  
+  if not instance:
+    fatal_error("Cannot retrieve instance", instance_id, '\n')
 
-def run_instance(connection, ami,
+  return instance
+
+def instantiate(connection, ami,
     key_pair = None, inst_type = None, sec_group = None):
   reservation = connection.run_instances(ami,
       key_name = key_pair,
@@ -41,19 +163,30 @@ def run_instance(connection, ami,
       security_groups = [sec_group])
   instance = reservation.instances[0]
 
-  return poll_instance_state(instance, 'running')
+  return instance
 
+def execute(cmd, attempts = 10, delay = 2, verbose = False):
 
-def terminate_instance(connection, id):
-  terminated = connection.terminate_instances(instance_ids=[id])
-  instance = terminated[0]
+  if verbose:
+    out = None
+  else:
+    out = open(os.devnull, 'wb')
 
-  return poll_instance_state(instance, 'terminated')
+  for i in range(1, attempts):
+    print_info("Execution attempt", i, "of", attempts, "\n")
+    ret = subprocess.call(cmd, stdout = out, stderr = out)
+    if ret == 0:
+      return ret
+    else:
+      time.sleep(delay)
+  
+  print_info("Execution failed\n")
 
+  return ret
 
-def ssh_copy(username, key, host, remote_dir, exe):
-  cmd = ['/usr/bin/scp',
-      '-q',
+def ssh_copy(username, key, host, remote_dir, exe, args = "", verbose = False):
+
+  scp = ['/usr/bin/scp',
       '-o',
       'StrictHostKeyChecking no',
       '-i',
@@ -61,12 +194,13 @@ def ssh_copy(username, key, host, remote_dir, exe):
       exe,
       username + '@' + host + ":" + remote_dir]
 
-  return subprocess.call(cmd);
+  print_info("Copying executable\n")
 
+  return execute(scp, verbose = verbose)
 
-def ssh_run(username, key, host, remote_dir, exe, args):
-  cmd = ['/usr/bin/ssh',
-      '-q',
+def ssh_run(username, key, host, remote_dir, exe, args = "", verbose = False):
+
+  run = ['/usr/bin/ssh',
       '-o',
       'StrictHostKeyChecking no',
       '-i',
@@ -74,115 +208,83 @@ def ssh_run(username, key, host, remote_dir, exe, args):
       username + '@' + host,
       os.path.join(remote_dir, os.path.basename(exe))] + args
 
-  return subprocess.call(cmd);
-
-
-def ssh_snet_run(username, key, host, remote_dir, exe, args):
-  return ssh_run(username, key, host, remote_dir, exe, ['-hostn', host] + args)
-
-
-def run_on_instance(connection, id, username, key,
-    remote_dir, exe, args, attempts = 10):
-  """Attempt to run exe on the remote instance id"""
-
-  reservation = connection.get_all_instances(instance_ids=[id])
-  instance = reservation[0].instances[0]
-
-  for i in range(1, attempts):
-    print "SSH attempt %d/%d" % (i, attempts)
-    ret = ssh_copy(username, key, instance.public_dns_name, remote_dir, exe)
-    if (ret == 0):
-      break
-    else:
-      time.sleep(2)
+  print_info("Running executable\n")
   
-  if ret != 0:
-    return ret
-
-  ret = ssh_snet_run(username, key, instance.public_dns_name, remote_dir, exe, args)
-
-  return ret
+  return execute(run, verbose = verbose)
 
 
 if __name__ == "__main__":
 
-  usage = "usage: %prog [OPTIONS] <EXE> [<--> [ARGS]]"
-  parser = OptionParser(usage=usage)
+  (options, args) = parse_options()
 
-  parser.add_option("-i", "--id", action="store",
-    type="string", dest="instance",
-    default="",
-    help="Instance id where EXE will be run. If specified, \
-        instance creation will be skipped")
+  if options.verbose:
+    print_info = verbose_print
+    print_return = verbose_print
+  elif not options.quiet:
+    print_return = verbose_print
+    print_info = lambda *a: None
+  else:
+    print_return = lambda *a: None
+    print_info = lambda *a: None
 
-  parser.add_option("-g", "--region", action="store",
-    type="string", dest="region",
-    default="eu-west-1",
-    help="AWS region in which the instance will be started")
+  if options.copy or options.run:
+    try:
+      executable = args[0]
+      exe_args = args[1:]
+    except:
+      fatal_error("-C and -R require EXE\n")
 
-  parser.add_option("-a", "--ami", action="store",
-    type="string", dest="ami",
-    default="ami-f1a5b285",
-    help="AMI id of the S-Net enabled image")
+  output = '\n'
 
-  parser.add_option("-k", "--key", action="store",
-    type="string", dest="key",
-    default=os.path.expanduser("~/.ssh/snetdev.pem"),
-    help="SSH key to use to access the instances")
+  connection = connect(region = options.region)
+  instance_id = options.instance_id
+  instance = None
 
-  parser.add_option("-p", "--key-pair", action="store",
-    type="string", dest="key_pair",
-    default="snetdev",
-    help="AWS key pair to use. Must match KEY")
-
-  parser.add_option("-s", "--security-group", action="store",
-    type="string", dest="sec_group",
-    default="unsafe",
-    help="AWS security group in which the instance will be placed")
-
-  parser.add_option("-t", "--type", action="store",
-    type="string", dest="inst_type",
-    default="t1.micro",
-    help="AWS type of the instances")
-
-  parser.add_option("-u", "--username", action="store",
-    type="string", dest="username",
-    default="ubuntu",
-    help="username that will execute EXE on the instance")
-
-  parser.add_option("-r", "--remote-dir", action="store",
-    type="string", dest="remote_dir",
-    default="/tmp",
-    help="remote dir where the EXE binary will be copied")
-
-  parser.add_option("-A", "--keep-alive", action="store_true",
-    dest="keep_alive", default=False,
-    help="Do not terminate the instance when done. Default: True when\
-        -i ID is provided. False otherwise.")
-
-  (options, args) = parser.parse_args()
-
-  executable = args[0] #FIXME: print usage if missing
-  exe_args = args[1:]
-
-  print "Establishing connection to cloud provider...",
-  connection = boto.ec2.connect_to_region(options.region)
-  print "OK"
-
-  instance = options.instance
-  if instance == "":
-    print "Starting new instance"
-    instance = run_instance(connection, options.ami,
+  if instance_id != "":
+    options.instantiate = False;
+    instance = get_instance(connection, instance_id)
+  elif not options.instantiate:
+    fatal_error("Option -I or -i <ID> required\n")
+  else:
+    print_info("Starting new instance\n")
+    instance = instantiate(connection, options.ami,
         key_pair = options.key_pair,
         inst_type = options.inst_type,
         sec_group = options.sec_group)
-  else:
-    options.keep_alive = True
-    
-  print "Running on instance: %s" % instance
-  run_on_instance(connection, instance, options.username, 
-      options.key, options.remote_dir, executable, exe_args)
+    instance_id = instance.id
 
-  print "Terminating Instance:", not options.keep_alive
-  if not options.keep_alive:
-    terminate_instance(connection, instance)
+  if instance.state == "pending":
+    poll_state(instance, "running")
+  elif instance.state == "running":
+    pass
+  else:
+    fatal_error("Instance is not running\n")
+
+  output = "Instance: " + instance.id + ' ' + instance.public_dns_name + ' ' + instance.state
+
+  if options.state:
+    print_info("Retrieving state\n")
+    output = instance.state
+
+  if options.copy:
+    output = ssh_copy(options.username, options.key,
+        instance.public_dns_name, options.remote_dir,
+        executable, verbose = options.verbose)
+    if output != 0:
+      fatal_error("Copy failed\n")
+
+  if options.run:
+    output = ssh_run(options.username, options.key,
+        instance.public_dns_name, options.remote_dir,
+        executable, exe_args, verbose = options.verbose)
+    if output != 0:
+      fatal_error("Run failed\n")
+
+  if options.terminate:
+    print_info("Terminating instance\n")
+    instance.terminate()
+    output = 0
+
+  print_return(output)
+  sys.exit(0)
+
