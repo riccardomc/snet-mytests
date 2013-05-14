@@ -212,6 +212,9 @@ def ssh_run(username, key, host, remote_dir, exe, args = "", verbose = False):
   
   return execute(run, verbose = verbose)
 
+def ssh_run_snet(username, key, host, remote_dir, exe, args = "", verbose = False):
+  return ssh_run(username, key, host, remote_dir, exe, ['-hostn', host] + args,
+      verbose = verbose)
 
 if __name__ == "__main__":
 
@@ -274,7 +277,7 @@ if __name__ == "__main__":
       fatal_error("Copy failed\n")
 
   if options.run:
-    output = ssh_run(options.username, options.key,
+    output = ssh_run_snet(options.username, options.key,
         instance.public_dns_name, options.remote_dir,
         executable, exe_args, verbose = options.verbose)
     if output != 0:
