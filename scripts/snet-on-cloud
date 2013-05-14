@@ -131,7 +131,7 @@ def poll_state(instance, state, attempts = 90, delay = 2):
   instance_state = instance.update(validate = True)
   print_info("Polling", instance.id, "for state", state,
       "for", (attempts * delay),"seconds :", instance_state, "\n")
-  for i in range(1, attempts):
+  for i in range(1, attempts + 1):
     instance_state = instance.update(validate = True)
     if instance_state != state:
       time.sleep(2)
@@ -172,7 +172,7 @@ def execute(cmd, attempts = 10, delay = 2, verbose = False):
   else:
     out = open(os.devnull, 'wb')
 
-  for i in range(1, attempts):
+  for i in range(1, attempts + 1):
     print_info("Execution attempt", i, "of", attempts, "\n")
     ret = subprocess.call(cmd, stdout = out, stderr = out)
     if ret == 0:
