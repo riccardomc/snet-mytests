@@ -72,7 +72,7 @@ def parse_options():
     help="remote dir where the EXE binary will be copied")
   
   actions = OptionGroup(parser, "Actions", "Actions to perform. If more than one "
-      "action is specified, the evaluation order follows the one in this help")
+      "action is specified, the execution order follows the one in this help")
 
   actions.add_option("-I", "--instantiate", action="store_true",
       dest="instantiate", default=False,
