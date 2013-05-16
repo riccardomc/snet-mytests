@@ -36,7 +36,7 @@ def parse_options():
 
   awsopts.add_option("-a", "--ami", action="store",
     type="string", dest="ami",
-    default="ami-f1a5b285",
+    default="ami-4d7e6f39",
     help="AMI id of the S-Net enabled image")
 
   awsopts.add_option("-p", "--key-pair", action="store",
