@@ -11,7 +11,7 @@ SUBM=$3
 SRCDIR="$PWD/bench-pipeline"
 
 ([ -z "$TESTF" ] |  [ -z "$RUNS" ]) && \
-echo "$0 <TEST_FILE> <RUNS> [local|pbs|qsub]" && exit 1
+echo "$0 <TEST_FILE> <RUNS> [local|pbs|qsub|cloud]" && exit 1
 
 [ -z "$3" ] && SUBM=local
 
